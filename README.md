@@ -4,7 +4,6 @@ Here's a comprehensive **README.md** for your Internal Automation Platform repos
 ```markdown
 # Internal Automation Platform (LLM-Powered)
 
-![System Diagram](https://i.imgur.com/JKQ4W7X.png)
 
 Enterprise-grade automation platform with local LLM integration, vector search, and visual workflow builder. Fully self-contained with no external dependencies.
 
