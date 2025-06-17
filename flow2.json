@@ -1,0 +1,227 @@
+[
+    {
+        "id": "a1b2c3d4",
+        "type": "tab",
+        "label": "LLM Automation Platform",
+        "disabled": false,
+        "info": "Self-hosted automation with LLM integration"
+    },
+    {
+        "id": "n1",
+        "type": "http in",
+        "z": "a1b2c3d4",
+        "name": "API Endpoint",
+        "url": "/process",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 100
+    },
+    {
+        "id": "n2",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Validate Input",
+        "func": "// Validate and prepare input\nif (!msg.payload.text && !msg.payload.file) {\n    throw new Error('Either text or file must be provided');\n}\n\nmsg.workflow = {\n    id: msg.payload.workflow_id || 1,\n    user: msg.req.user || 'system',\n    timestamp: new Date().toISOString()\n};\n\n// If file provided, simulate text extraction\nif (msg.payload.file) {\n    msg.payload.text = \"Extracted text from file: \" + msg.payload.file.filename;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "x": 350,
+        "y": 100
+    },
+    {
+        "id": "n3",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "Vector Embedding",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://vector-service:8000/embed",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 550,
+        "y": 100
+    },
+    {
+        "id": "n4",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare Vector Query",
+        "func": "msg.payload = {\n    text: msg.payload.text,\n    workflow_id: msg.workflow.id,\n    k: 3  // Number of similar documents to retrieve\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 350,
+        "y": 180
+    },
+    {
+        "id": "n5",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "Vector Search",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://vector-service:8000/query",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 550,
+        "y": 180
+    },
+    {
+        "id": "n6",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare LLM Prompt",
+        "func": "const task = msg.payload.task || \"Summarize the key information\";\nconst similarDocs = msg.payload.results || [];\n\nmsg.payload = {\n    model: \"llama2\",\n    prompt: `${task}:\\n\\nInput:\\n${msg.payload.text}\\n\\n` +\n             (similarDocs.length > 0 \n                ? `Similar Documents:\\n${similarDocs.map(d => d.content).join('\\n---\\n')}` \n                : ''),\n    temperature: 0.7,\n    max_tokens: 1000\n};\n\nreturn msg;",
+        "outputs": 1,
+        "x": 550,
+        "y": 260
+    },
+    {
+        "id": "n7",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "LLM Processing",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://llm-service:8000/generate",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 750,
+        "y": 260
+    },
+    {
+        "id": "n8",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare DB Storage",
+        "func": "msg.payload = {\n    workflow_id: msg.workflow.id,\n    user: msg.workflow.user,\n    input: msg.originalPayload,\n    output: msg.payload,\n    timestamp: msg.workflow.timestamp\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 750,
+        "y": 340
+    },
+    {
+        "id": "n9",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "Store Results",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://db-service:8000/results",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 950,
+        "y": 340
+    },
+    {
+        "id": "n10",
+        "type": "http response",
+        "z": "a1b2c3d4",
+        "name": "API Response",
+        "statusCode": "",
+        "headers": {},
+        "x": 1150,
+        "y": 260
+    },
+    {
+        "id": "n11",
+        "type": "catch",
+        "z": "a1b2c3d4",
+        "name": "Catch Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 150,
+        "y": 340
+    },
+    {
+        "id": "n12",
+        "type": "change",
+        "z": "a1b2c3d4",
+        "name": "Set Error Response",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"error\": error.message}",
+                "tot": "json"
+            },
+            {
+                "t": "set",
+                "p": "statusCode",
+                "pt": "msg",
+                "to": "500",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 350,
+        "y": 340
+    },
+    {
+        "id": "n13",
+        "type": "debug",
+        "z": "a1b2c3d4",
+        "name": "Debug Output",
+        "active": true,
+        "console": "false",
+        "complete": "true",
+        "x": 950,
+        "y": 180
+    },
+    {
+        "id": "n14",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Log Execution",
+        "func": "console.log(`Workflow executed: ${msg.workflow.id} by ${msg.workflow.user}`);\nreturn msg;",
+        "outputs": 1,
+        "x": 750,
+        "y": 180
+    },
+    {
+        "id": "n15",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare Final Response",
+        "func": "msg.payload = {\n    result: msg.payload,\n    workflow_id: msg.workflow.id,\n    timestamp: msg.workflow.timestamp\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 950,
+        "y": 260
+    },
+    {
+        "id": "n16",
+        "type": "change",
+        "z": "a1b2c3d4",
+        "name": "Store Original",
+        "rules": [
+            {
+                "t": "set",
+                "p": "originalPayload",
+                "pt": "msg",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 350,
+        "y": 220
+    }
+]

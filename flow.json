@@ -1,0 +1,159 @@
+[
+    {
+        "id": "a1b2c3d4",
+        "type": "tab",
+        "label": "Invoice Processor",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "n1",
+        "type": "http in",
+        "z": "a1b2c3d4",
+        "name": "New Invoice",
+        "url": "/invoice",
+        "method": "post",
+        "upload": true,
+        "swaggerDoc": "",
+        "x": 120,
+        "y": 100
+    },
+    {
+        "id": "n2",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Extract Text",
+        "func": "// Simulated text extraction\nmsg.payload = {\n    content: \"Invoice #1234 from Acme Corp for $1,200.50 due 2023-12-31\",\n    workflow_id: 1\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 320,
+        "y": 100
+    },
+    {
+        "id": "n3",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "Store Embedding",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://python-service:8000/embed",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 520,
+        "y": 100
+    },
+    {
+        "id": "n4",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "Query Similar",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://python-service:8000/query",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 520,
+        "y": 180
+    },
+    {
+        "id": "n5",
+        "type": "http request",
+        "z": "a1b2c3d4",
+        "name": "LLaMA Process",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": false,
+        "url": "http://python-service:8000/llama",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 720,
+        "y": 140
+    },
+    {
+        "id": "n6",
+        "type": "http response",
+        "z": "a1b2c3d4",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 920,
+        "y": 140
+    },
+    {
+        "id": "n7",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare Query",
+        "func": "msg.payload = {\n    text: msg.payload.content,\n    workflow_id: msg.payload.workflow_id\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 320,
+        "y": 180
+    },
+    {
+        "id": "n8",
+        "type": "function",
+        "z": "a1b2c3d4",
+        "name": "Prepare Prompt",
+        "func": "msg.payload = `Summarize this invoice and compare with similar documents:\\n\\nCurrent: ${msg.payload.content}\\n\\nSimilar:\\n${msg.payload.results.map(r => r.content).join('\\n')}`;\nreturn msg;",
+        "outputs": 1,
+        "x": 320,
+        "y": 260
+    },
+    {
+        "id": "n9",
+        "type": "debug",
+        "z": "a1b2c3d4",
+        "name": "Debug Output",
+        "active": true,
+        "console": "false",
+        "complete": "true",
+        "x": 920,
+        "y": 220
+    },
+    {
+        "id": "n10",
+        "type": "catch",
+        "z": "a1b2c3d4",
+        "name": "Catch Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 260
+    },
+    {
+        "id": "n11",
+        "type": "change",
+        "z": "a1b2c3d4",
+        "name": "Set Error Response",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"error\": error.message}",
+                "tot": "json"
+            },
+            {
+                "t": "set",
+                "p": "statusCode",
+                "pt": "msg",
+                "to": "500",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 340
+    }
+]
