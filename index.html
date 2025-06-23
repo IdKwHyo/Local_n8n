@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Search & LLM Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .similarity-score {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        .success {
+            background: #efe;
+            color: #363;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #363;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+        }
+
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 1000;
+        }
+
+        .api-status.healthy {
+            background: #4caf50;
+            color: white;
+        }
+
+        .api-status.unhealthy {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="api-status" id="apiStatus">Checking API...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Semantic Search & LLM Interface</h1>
+            <p>Embed documents, search semantically, and interact with LLM models</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('embed')">Embed Document</button>
+                <button class="tab" onclick="switchTab('search')">Semantic Search</button>
+                <button class="tab" onclick="switchTab('llm')">LLM Query</button>
+            </div>
+
+            <!-- Embed Document Tab -->
+            <div id="embed" class="tab-content active">
+                <h2 style="margin-bottom: 20px;">Embed Document</h2>
+                <form onsubmit="embedDocument(event)">
+                    <div class="form-group">
+                        <label for="document-content">Document Content</label>
+                        <textarea id="document-content" placeholder="Enter your document content here..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="embed-workflow-id">Workflow ID (optional)</label>
+                        <input type="number" id="embed-workflow-id" placeholder="Leave empty for no workflow">
+                    </div>
+                    <button type="submit" class="btn" id="embed-btn">Embed Document</button>
+                </form>
+                
+                <div class="loading" id="embed-loading">
+                    <div class="spinner"></div>
+                    <p>Creating embedding...</p>
+                </div>
+                
+                <div id="embed-results"></div>
+            </div>
+
+            <!-- Semantic Search Tab -->
+            <div id="search" class="tab-content">
+                <h2 style="margin-bottom: 20px;">Semantic Search</h2>
+                <form onsubmit="performSearch(event)">
+                    <div class="form-group">
+                        <label for="search-query">Search Query</label>
+                        <input type="text" id="search-query" placeholder="What are you looking for?" required>
+                    </div>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="search-workflow-id">Workflow ID (optional)</label>
+                            <input type="number" id="search-workflow-id" placeholder="Leave empty to search all">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-k">Number of Results</label>
+                            <select id="search-k">
+                                <option value="3">3</option>
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn" id="search-btn">Search</button>
+                </form>
+                
+                <div class="loading" id="search-loading">
+                    <div class="spinner"></div>
+                    <p>Searching documents...</p>
+                </div>
+                
+                <div id="search-results"></div>
+            </div>
+
+            <!-- LLM Query Tab -->
+            <div id="llm" class="tab-content">
+                <h2 style="margin-bottom: 20px;">LLM Query</h2>
+                <form onsubmit="queryLLM(event)">
+                    <div class="form-group">
+                        <label for="llm-prompt">Prompt</label>
+                        <textarea id="llm-prompt" placeholder="Enter your prompt here..." required></textarea>
+                    </div>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="llm-model">Model</label>
+                            <select id="llm-model">
+                                <option value="llama2">Llama 2</option>
+                                <option value="llama3">Llama 3</option>
+                                <option value="mistral">Mistral</option>
+                                <option value="codellama">Code Llama</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-temperature">Temperature</label>
+                            <input type="number" id="llm-temperature" min="0" max="2" step="0.1" value="0.7">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="llm-max-tokens">Max Tokens</label>
+                        <input type="number" id="llm-max-tokens" min="1" max="4000" value="1000">
+                    </div>
+                    <button type="submit" class="btn" id="llm-btn">Generate Response</button>
+                </form>
+                
+                <div class="loading" id="llm-loading">
+                    <div class="spinner"></div>
+                    <p>Generating response...</p>
+                </div>
+                
+                <div id="llm-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        // Check API health on load
+        checkAPIHealth();
+        setInterval(checkAPIHealth, 30000); // Check every 30 seconds
+
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const status = document.getElementById('apiStatus');
+                if (response.ok) {
+                    status.textContent = 'API Healthy';
+                    status.className = 'api-status healthy';
+                } else {
+                    status.textContent = 'API Unhealthy';
+                    status.className = 'api-status unhealthy';
+                }
+            } catch (error) {
+                const status = document.getElementById('apiStatus');
+                status.textContent = 'API Offline';
+                status.className = 'api-status unhealthy';
+            }
+        }
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        async function embedDocument(event) {
+            event.preventDefault();
+            
+            const content = document.getElementById('document-content').value;
+            const workflowId = document.getElementById('embed-workflow-id').value;
+            
+            const loading = document.getElementById('embed-loading');
+            const btn = document.getElementById('embed-btn');
+            const results = document.getElementById('embed-results');
+            
+            loading.style.display = 'block';
+            btn.disabled = true;
+            results.innerHTML = '';
+            
+            try {
+                const payload = {
+                    content: content,
+                    workflow_id: workflowId ? parseInt(workflowId) : null
+                };
+                
+                const response = await fetch(`${API_BASE}/embed`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML = `
+                        <div class="success">
+                            <strong>Success!</strong> Document embedded with ID: ${data.id}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.detail || 'Unknown error');
+                }
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        async function performSearch(event) {
+            event.preventDefault();
+            
+            const query = document.getElementById('search-query').value;
+            const workflowId = document.getElementById('search-workflow-id').value;
+            const k = document.getElementById('search-k').value;
+            
+            const loading = document.getElementById('search-loading');
+            const btn = document.getElementById('search-btn');
+            const results = document.getElementById('search-results');
+            
+            loading.style.display = 'block';
+            btn.disabled = true;
+            results.innerHTML = '';
+            
+            try {
+                const payload = {
+                    text: query,
+                    workflow_id: workflowId ? parseInt(workflowId) : null,
+                    k: parseInt(k)
+                };
+                
+                const response = await fetch(`${API_BASE}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.results && data.results.length > 0) {
+                        const resultsHTML = data.results.map(result => `
+                            <div class="result-item">
+                                <div class="similarity-score">${(result.similarity * 100).toFixed(1)}% match</div>
+                                <p><strong>ID:</strong> ${result.id}</p>
+                                <p><strong>Content:</strong> ${result.content}</p>
+                            </div>
+                        `).join('');
+                        
+                        results.innerHTML = `
+                            <div class="results">
+                                <h3>Search Results (${data.results.length} found)</h3>
+                                ${resultsHTML}
+                            </div>
+                        `;
+                    } else {
+                        results.innerHTML = `
+                            <div class="results">
+                                <p>No results found for your query.</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    throw new Error(data.detail || 'Unknown error');
+                }
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        async function queryLLM(event) {
+            event.preventDefault();
+            
+            const prompt = document.getElementById('llm-prompt').value;
+            const model = document.getElementById('llm-model').value;
+            const temperature = parseFloat(document.getElementById('llm-temperature').value);
+            const maxTokens = parseInt(document.getElementById('llm-max-tokens').value);
+            
+            const loading = document.getElementById('llm-loading');
+            const btn = document.getElementById('llm-btn');
+            const results = document.getElementById('llm-results');
+            
+            loading.style.display = 'block';
+            btn.disabled = true;
+            results.innerHTML = '';
+            
+            try {
+                const payload = {
+                    model: model,
+                    prompt: prompt,
+                    temperature: temperature,
+                    max_tokens: maxTokens
+                };
+                
+                const response = await fetch(`${API_BASE}/llama`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    results.innerHTML = `
+                        <div class="results">
+                            <h3>LLM Response</h3>
+                            <div class="result-item">
+                                <p><strong>Model:</strong> ${model}</p>
+                                <p><strong>Response:</strong></p>
+                                <div style="white-space: pre-wrap; margin-top: 10px; padding: 15px; background: #f9f9f9; border-radius: 5px;">${data.response}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.detail || 'Unknown error');
+                }
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
