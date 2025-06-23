@@ -1,90 +1,13 @@
-version: '3.8'
+# Use official n8n image
+FROM n8nio/n8n:latest
 
-services:
-  node-red:
-    image: nodered/node-red:3.0.2
-    ports:
-      - "1880:1880"
-    volumes:
-      - node-red-data:/data
-      - ./node-red/flows.json:/data/flows.json
-    environment:
-      - NODE_RED_CREDENTIAL_SECRET=your_secret_key
-      - FLOWS=/data/flows.json
-    depends_on:
-      - api-service
-    networks:
-      - internal-net
+# Set up environment variables
+ENV N8N_PORT=5678 \
+    N8N_HOST=0.0.0.0 \
+    N8N_PROTOCOL=http
 
-  api-service:
-    build: ./python-service
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./python-service:/app
-    environment:
-      - POSTGRES_URL=postgres://postgres:postgres@postgres:5432/automation
-      - OLLAMA_HOST=http://ollama:11434
-      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
-      - UVICORN_WORKERS=4
-    depends_on:
-      - postgres
-      - ollama
-    networks:
-      - internal-net
+# Expose port
+EXPOSE 5678
 
-  postgres:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=automation
-    volumes:
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - internal-net
-
-  ollama:
-    image: ollama/ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    command: ollama serve
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - internal-net
-
-  adminer:
-    image: adminer
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-    networks:
-      - internal-net
-
-volumes:
-  pgdata:
-  ollama-data:
-  node-red-data:
-
-networks:
-  internal-net:
-    driver: bridge
+# Run n8n
+CMD ["n8n"]
