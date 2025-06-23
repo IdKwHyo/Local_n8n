@@ -1,4 +1,23 @@
-# Use official n8n image
+# Dockerfile - Place this in your repository root
+FROM n8nio/n8n:latest
+
+# Set the user to root to install additional packages if needed
+USER root
+
+# Install any additional packages you might need
+# RUN apk add --no-cache python3 py3-pip
+
+# Switch back to the n8n user
+USER node
+
+# Set working directory
+WORKDIR /home/node
+
+# Expose the port
+EXPOSE 5678
+
+# The default command is already set in the base image
+# CMD ["n8n", "start"]# Use official n8n image
 FROM n8nio/n8n:latest
 
 # Set up environment variables
